@@ -36,6 +36,10 @@ def main():
 def foodexp():
     return(render_template("foodexp.html"))
 
+@app.route("/telegram",methods=["POST","GET"])
+def telegram():
+    return(render_template("telegram.html"))
+
 @app.route("/foodexp1",methods=["POST","GET"])
 def foodexp1():
     return(render_template("foodexp1.html"))
