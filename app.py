@@ -4,10 +4,18 @@ import datetime
 import google.generativeai as genai
 import os
 import wikipedia
+import time
+import requests
+from threading import Thread
+
 
 api= os.getenv("makersuite")
 model = genai.GenerativeModel("gemini-1.5-flash")
 genai.configure(api_key= api)
+
+TOKEN = '8024544485:AAE8h7I4vXt_7bO7nJr6ed7MuuzAwHxGJhs'
+BASE_URL = f'https://api.telegram.org/bot{TOKEN}/'
+
 
 app = Flask(__name__)
 
@@ -36,9 +44,42 @@ def main():
 def foodexp():
     return(render_template("foodexp.html"))
 
-@app.route("/telegram",methods=["POST","GET"])
+def run_telegram_bot():
+    time.sleep(5)
+    r = requests.get(BASE_URL + 'getUpdates').json()
+    chat = r['result'][-1]['message']['chat']['id']
+    flag = ""
+    prompt = "Welcome to prediction. Please enter the inflation rate in %: (type exit to break)"
+    err_msg = "Please enter a number"
+    
+    while True:
+        msg = BASE_URL + f"sendMessage?chat_id={chat}&text={prompt}"
+        requests.get(msg)
+        time.sleep(5)
+        
+        r = requests.get(BASE_URL + "getUpdates").json()
+        last_msg = r["result"][-1]["message"]["text"]
+        
+        if flag != last_msg:
+            flag = last_msg
+            if last_msg.isnumeric():
+                response = "The predicted interest rate is " + str(float(last_msg) + 1.5)
+                requests.get(BASE_URL + f"sendMessage?chat_id={chat}&text={response}")
+            elif last_msg.lower() == "exit":
+                break
+            else:
+                requests.get(BASE_URL + f"sendMessage?chat_id={chat}&text={err_msg}")
+        time.sleep(8)
+
+@app.route('/telegram', methods=['GET','POST'])
 def telegram():
-    return(render_template("telegram.html"))
+    if request.method == 'GET':
+        return render_template("telegram.html")
+    else:
+        # Start the bot in a background thread
+        Thread(target=run_telegram_bot).start()
+        # Return the page immediately
+        return render_template("telegram.html")
 
 @app.route("/foodexp1",methods=["POST","GET"])
 def foodexp1():
